@@ -4,7 +4,7 @@ import Map from "@/components/Map";
 import RideCard from "@/components/RideCard";
 import { icons, images } from "@/constants";
 import { useLocationStore } from "@/store";
-import { useUser } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -127,16 +127,12 @@ const recentRides = [
 export default function Page() {
   const { setUserLocation, setDestinationLocation } = useLocationStore();
   const { user } = useUser();
+  const { signOut } = useAuth();
   const loading = true;
-  const [hasPermissions, setHasPermissions] = useState(false);
-  const handleSingOut = () => {};
-  const handleDestinationPress = (location: {
-    latitude: number;
-    longitude: number;
-    address: string;
-  }) => {
-    setDestinationLocation(location);
-    router.push("/(root)/find-ride");
+  const [hasPermissions, setHasPermissions] = useState<boolean>(false);
+  const handleSignOut = () => {
+    signOut();
+    router.replace("/(auth)/sign-in");
   };
 
   useEffect(() => {
@@ -146,31 +142,43 @@ export default function Page() {
         setHasPermissions(false);
         return;
       }
-      let location = await Location.getCurrentPositionAsync();
+      let location = await Location.getCurrentPositionAsync({});
+
       const address = await Location.reverseGeocodeAsync({
         latitude: location.coords?.latitude!,
         longitude: location.coords?.longitude!,
       });
+
       setUserLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+        latitude: location.coords?.latitude,
+        longitude: location.coords?.longitude,
         address: `${address[0].name}, ${address[0].region}`,
       });
     };
     requestLocation();
   }, []);
 
+  const handleDestinationPress = (location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  }) => {
+    setDestinationLocation(location);
+
+    router.push("/(root)/find-ride");
+  };
+
   return (
     <SafeAreaView className="bg-general-500">
       <FlatList
+        data={recentRides?.slice(0, 5)}
+        renderItem={({ item }) => <RideCard ride={item} />}
+        keyExtractor={(item, index) => index.toString()}
         className="px-5"
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           paddingBottom: 100,
         }}
-        data={recentRides?.slice(0, 5)}
-        // data={[]}
-        renderItem={({ item }) => <RideCard ride={item} />}
         ListEmptyComponent={() => (
           <View className="flex flex-col items-center justify-center">
             {!loading ? (
@@ -188,40 +196,40 @@ export default function Page() {
             )}
           </View>
         )}
-        ListHeaderComponent={() => (
+        ListHeaderComponent={
           <>
             <View className="flex flex-row items-center justify-between my-5">
-              <Text className="text-2xl font-JakartaExtraBold capitalize">
-                Welcome{", "}
-                {user?.firstName ||
-                  user?.emailAddresses[0].emailAddress.split("@")[0]}
+              <Text className="text-2xl font-JakartaExtraBold">
+                Welcome {user?.firstName}👋
               </Text>
               <TouchableOpacity
-                onPress={handleSingOut}
+                onPress={handleSignOut}
                 className="justify-center items-center w-10 h-10 rounded-full bg-white"
               >
-                <Image source={icons.out} className="w-5 h-5" />
+                <Image source={icons.out} className="w-4 h-4" />
               </TouchableOpacity>
             </View>
 
             <GoogleTextInput
               icon={icons.search}
-              containerStyle="bg-white shadow-md shadow-neutral-300 "
+              containerStyle="bg-white shadow-md shadow-neutral-300"
               handlePress={handleDestinationPress}
             />
+
             <>
               <Text className="text-xl font-JakartaBold mt-5 mb-3">
-                Your Current Location
+                Your current location
               </Text>
               <View className="flex flex-row items-center bg-transparent h-[300px]">
                 <Map />
               </View>
             </>
+
             <Text className="text-xl font-JakartaBold mt-5 mb-3">
               Recent Rides
             </Text>
           </>
-        )}
+        }
       />
     </SafeAreaView>
   );

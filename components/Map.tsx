@@ -1,9 +1,12 @@
 import { icons } from "@/constants";
-import { calculateRegion, generateMarkersFromData } from "@/lib/map";
+import {
+  calculateDriverTimes,
+  calculateRegion,
+  generateMarkersFromData,
+} from "@/lib/map";
 import { useDriverStore, useLocationStore } from "@/store";
 import { MarkerData } from "@/types/type";
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 
 const drivers = [
@@ -60,9 +63,41 @@ const Map = () => {
     destinationLatitude,
     destinationLongitude,
   } = useLocationStore();
+  const { selectedDriver, setDrivers } = useDriverStore();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
 
-  const { selectedDriver, setDrivers } = useDriverStore();
+  useEffect(() => {
+    if (Array.isArray(drivers)) {
+      if (!userLatitude || !userLongitude) return;
+
+      const newMarkers = generateMarkersFromData({
+        data: drivers,
+        userLatitude,
+        userLongitude,
+      });
+
+      setMarkers(newMarkers);
+    }
+  }, [drivers, userLatitude, userLongitude]);
+
+  useEffect(() => {
+    if (
+      markers.length > 0 &&
+      destinationLatitude !== undefined &&
+      destinationLongitude !== undefined
+    ) {
+      calculateDriverTimes({
+        markers,
+        userLatitude,
+        userLongitude,
+        destinationLatitude,
+        destinationLongitude,
+      }).then((drivers) => {
+        setDrivers(drivers as MarkerData[]);
+      });
+    }
+  }, [markers, destinationLatitude, destinationLongitude]);
+
   const region = calculateRegion({
     userLatitude,
     userLongitude,
@@ -70,17 +105,6 @@ const Map = () => {
     destinationLongitude,
   });
 
-  useEffect(() => {
-    if (Array.isArray(drivers)) {
-      if (!userLatitude || !userLongitude) return;
-      const newMarkers = generateMarkersFromData({
-        data: drivers,
-        userLatitude,
-        userLongitude,
-      });
-      setMarkers(newMarkers);
-    }
-  }, [drivers]);
   return (
     <MapView
       provider={PROVIDER_DEFAULT}
