@@ -1,9 +1,22 @@
-import { Image, Text, View } from "react-native";
-import CustomButton from "./CustomButton";
+import { useOAuth } from "@clerk/clerk-expo";
+import { router } from "expo-router";
+import { Alert, Image, Text, View } from "react-native";
+
+import CustomButton from "@/components/CustomButton";
 import { icons } from "@/constants";
+import { googleOAuth } from "@/lib/auth";
 
 const OAuth = () => {
-  const handleGoogleSignIn = async () => {};
+  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+
+  const handleGoogleSignIn = async () => {
+    const result = await googleOAuth(startOAuthFlow);
+
+    if (result.code === "session_exists" || "success") {
+      router.push("/(root)/(tabs)/home");
+    }
+    Alert.alert(result.success ? "Success" : "Error", result.message);
+  };
 
   return (
     <View>
@@ -12,6 +25,7 @@ const OAuth = () => {
         <Text className="text-lg">Or</Text>
         <View className="flex-1 h-[1px] bg-general-100" />
       </View>
+
       <CustomButton
         title="Log In with Google"
         className="mt-5 w-full shadow-none"
@@ -29,4 +43,5 @@ const OAuth = () => {
     </View>
   );
 };
+
 export default OAuth;
