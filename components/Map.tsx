@@ -81,6 +81,8 @@ const Map = () => {
   }, [drivers, userLatitude, userLongitude]);
 
   useEffect(() => {
+    //TODO: REMOVE
+    setDrivers(drivers);
     if (
       markers.length > 0 &&
       destinationLatitude !== undefined &&
